@@ -1,6 +1,6 @@
 {
   "name": "cactus-di",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "The Nest.js like DI container package",
   "main": "index.js",
   "scripts": {
