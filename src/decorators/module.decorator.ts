@@ -1,8 +1,10 @@
+import { Constructor } from "type-fest";
+
 export const ModuleMetadataKey = "module";
 
 export interface ModuleOptions {
   providers?: any[];
-  imports?: new (...args: any[]) => unknown[];
+  imports?: Constructor<void>[];
   exports?: any[];
 }
 
