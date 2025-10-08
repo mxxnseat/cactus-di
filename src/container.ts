@@ -6,12 +6,15 @@ import {
 } from "./decorators/module.decorator";
 import { Provider } from "./interfaces";
 import { CircularDependencyError } from "./errors";
+import { Constructor } from "type-fest";
+import { designParamtypesMetadataKey, singletonMetadataKey } from "./constants";
 
 export class Container {
   private readonly container = new Map<Provider, unknown>();
+  private readonly moduleRefs = new Map<Constructor<unknown>, Container>();
 
-  public get(provider: Provider) {
-    return this.container.get(provider);
+  public get<T = unknown>(provider: Provider): T | null {
+    return (this.container.get(provider) as T) ?? null;
   }
 
   public create(module: new (...args: any[]) => unknown) {
@@ -19,11 +22,24 @@ export class Container {
     if (!moduleOptions) {
       throw new Error(`Module ${module.name} is not a module`);
     }
+    (moduleOptions.imports ?? []).forEach((importModule) => {
+      const moduleContainer = new Container();
+      const exportedProviders = moduleContainer.create(importModule);
+      exportedProviders.forEach((provider: any) => {
+        this.container.set(provider.constructor, provider);
+      });
+
+      this.moduleRefs.set(importModule, moduleContainer);
+    });
     const sortedGraph = this.buildDependencyGraph(moduleOptions);
     this.initializeDependencies(sortedGraph);
+    return this.exportProviders(moduleOptions);
   }
 
-  private buildDependencyGraph({ providers = [] }: ModuleOptions) {
+  private buildDependencyGraph({
+    providers = [],
+    imports = [],
+  }: ModuleOptions) {
     const indegree = new Map<Provider, number>();
     const graph = new Map<Provider, Provider[]>();
 
@@ -31,7 +47,7 @@ export class Container {
 
     for (const provider of providersCopy) {
       const parameters =
-        Reflect.getMetadata("design:paramtypes", provider) ?? [];
+        Reflect.getMetadata(designParamtypesMetadataKey, provider) ?? [];
       indegree.set(provider, indegree.get(provider) ?? 0);
       parameters.forEach((parameter: Provider | { forwardRef: any }) => {
         if (parameter && "forwardRef" in parameter) {
@@ -70,14 +86,25 @@ export class Container {
   }
 
   private initializeDependencies(sortedGraph: Provider[]) {
-    sortedGraph.forEach((provider) => {
+    sortedGraph.map((provider) => {
       const parameters =
-        Reflect.getMetadata("design:paramtypes", provider) ?? [];
+        Reflect.getMetadata(designParamtypesMetadataKey, provider) ?? [];
       const dependencies = parameters.map((param: Provider) =>
         this.container.get(param)
       );
-      this.container.set(provider, new provider(...dependencies));
+      if (Reflect.hasOwnMetadata(singletonMetadataKey, provider)) {
+        return;
+      }
+      const providerInstance = new provider(...dependencies);
+      Reflect.defineMetadata(singletonMetadataKey, true, provider);
+      this.container.set(provider, providerInstance);
     });
+  }
+
+  private exportProviders({ exports = [] }: ModuleOptions) {
+    return Array.from(this.container.values()).filter((provider: any) =>
+      exports.includes(provider.constructor)
+    );
   }
 
   private getModuleOptions(

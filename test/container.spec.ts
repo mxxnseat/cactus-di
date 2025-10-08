@@ -1,6 +1,7 @@
 import { describe, it } from "mocha";
+import sinon from "sinon";
 import { Container } from "../src/container";
-import { Injectable, Module } from "../src/decorators";
+import { forwardRef, Injectable, Module } from "../src/decorators";
 import { expect } from "chai";
 import {
   TestSuccessProvider,
@@ -64,5 +65,90 @@ describe("Container", () => {
     expect(container.get(TestSuccessRootCircularDependency)).to.be.instanceOf(
       TestSuccessRootCircularDependency
     );
+  });
+
+  it("should build module with nested modules", () => {
+    @Module({})
+    class TestNestedModule {}
+
+    @Module({
+      imports: [TestNestedModule],
+    })
+    class TestModule {}
+
+    const container = new Container();
+    container.create(TestModule);
+
+    expect(container).to.be.instanceOf(Container);
+  });
+
+  it("should not get provider from nested module if it is not exported", () => {
+    @Injectable()
+    class TestNestedDependency {}
+
+    @Module({
+      providers: [TestNestedDependency],
+    })
+    class TestNestedModule {}
+
+    @Module({
+      imports: [TestNestedModule],
+    })
+    class TestModule {}
+
+    const container = new Container();
+    container.create(TestModule);
+
+    expect(container.get(TestNestedDependency)).to.be.null;
+  });
+
+  it("should get provider from nested module if it is exported", () => {
+    @Injectable()
+    class TestNestedDependency {}
+
+    @Module({
+      providers: [TestNestedDependency],
+      exports: [TestNestedDependency],
+    })
+    class TestNestedModule {}
+
+    @Module({
+      imports: [TestNestedModule],
+    })
+    class TestModule {}
+
+    const container = new Container();
+    container.create(TestModule);
+
+    expect(container.get(TestNestedDependency)).to.be.instanceOf(
+      TestNestedDependency
+    );
+  });
+
+  it("should build dependencies only once for nested modules", () => {
+    const spy = sinon.spy();
+
+    @Injectable()
+    class TestNestedDependency {
+      constructor() {
+        spy();
+      }
+    }
+
+    @Module({
+      providers: [TestNestedDependency],
+    })
+    class TestNestedModule {}
+
+    @Module({
+      imports: [TestNestedModule],
+      providers: [TestNestedDependency],
+    })
+    class TestModule {}
+
+    const container = new Container();
+    container.create(TestModule);
+
+    expect(spy.calledOnce).to.be.true;
   });
 });
