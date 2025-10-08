@@ -21,10 +21,11 @@
     "@types/sinon": "17.0.4",
     "chai": "6.2.0",
     "mocha": "11.7.4",
+    "release-it": "19.0.5",
+    "sinon": "21.0.0",
     "ts-node": "10.9.2",
     "type-fest": "5.0.1",
-    "typescript": "5.9.3",
-    "sinon": "21.0.0"
+    "typescript": "5.9.3"
   },
   "dependencies": {
     "reflect-metadata": "0.2.2"
