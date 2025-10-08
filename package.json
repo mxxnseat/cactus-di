@@ -21,7 +21,7 @@
     "chai": "6.2.0",
     "mocha": "11.7.4",
     "ts-node": "10.9.2",
-    "type-fest": "^5.0.1",
+    "type-fest": "5.0.1",
     "typescript": "5.9.3"
   },
   "dependencies": {
