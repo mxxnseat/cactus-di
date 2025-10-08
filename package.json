@@ -1,0 +1,30 @@
+{
+  "name": "cactus-di",
+  "version": "1.0.0",
+  "description": "The Nest.js like DI container package",
+  "main": "index.js",
+  "scripts": {
+    "test": "TS_NODE_PROJECT=tsconfig.spec.json mocha --config .mocharc.yml",
+    "test:watch": "TS_NODE_PROJECT=tsconfig.spec.json mocha --config .mocharc.yml --watch"
+  },
+  "keywords": [
+    "di",
+    "container",
+    "nestjs",
+    "dependency injection"
+  ],
+  "author": "mxxnseat<dumaesnormalno@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chai": "5.2.2",
+    "@types/mocha": "10.0.10",
+    "chai": "6.2.0",
+    "mocha": "11.7.4",
+    "ts-node": "10.9.2",
+    "type-fest": "^5.0.1",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "reflect-metadata": "0.2.2"
+  }
+}

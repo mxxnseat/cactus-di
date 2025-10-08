@@ -1,0 +1,14 @@
+require: ts-node/register
+
+spec:
+  - "test/**/*.spec.ts"
+
+watch-files:
+  - "src/**/*.ts"
+  - "test/**/*.spec.ts"
+
+timeout: 5000
+reporter: spec
+recursive: true
+exit: true
+color: true
