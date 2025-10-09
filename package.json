@@ -1,9 +1,11 @@
 {
   "name": "cactus-di",
   "version": "1.0.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "description": "The Nest.js like DI container package",
-  "main": "index.js",
   "scripts": {
+    "build": "tsc --project tsconfig.build.json",
     "test": "TS_NODE_PROJECT=tsconfig.spec.json mocha --config .mocharc.yml",
     "test:watch": "TS_NODE_PROJECT=tsconfig.spec.json mocha --config .mocharc.yml --watch"
   },

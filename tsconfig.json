@@ -2,9 +2,11 @@
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
-    "module": "CommonJS",
     "skipLibCheck": true,
     "types": ["reflect-metadata"],
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
     "moduleResolution": "node",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
@@ -14,7 +16,9 @@
     "strictPropertyInitialization": false,
     "strict": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    "rootDir": "./",
+    "outDir": "./dist"
   },
   "include": ["src/**/*"],
   "exclude": ["test/**/*", "node_modules", "dist"],
