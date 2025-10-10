@@ -8,7 +8,7 @@ export interface ModuleOptions {
   exports?: any[];
 }
 
-export const Module = (moduleOptions: ModuleOptions) => {
-  return (target: Function) =>
+export const Module = (moduleOptions: ModuleOptions): ClassDecorator => {
+  return (target: object) =>
     Reflect.defineMetadata(ModuleMetadataKey, moduleOptions, target);
 };

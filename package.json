@@ -7,7 +7,11 @@
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
     "test": "TS_NODE_PROJECT=tsconfig.spec.json mocha --config .mocharc.yml",
-    "test:watch": "TS_NODE_PROJECT=tsconfig.spec.json mocha --config .mocharc.yml --watch"
+    "test:watch": "TS_NODE_PROJECT=tsconfig.spec.json mocha --config .mocharc.yml --watch",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix",
+    "format": "prettier --check \"**/*.ts\"",
+    "format:fix": "prettier --write \"**/*.ts\""
   },
   "keywords": [
     "di",
@@ -18,16 +22,23 @@
   "author": "mxxnseat<dumaesnormalno@gmail.com>",
   "license": "MIT",
   "devDependencies": {
+    "@eslint/js": "9.15.0",
     "@types/chai": "5.2.2",
     "@types/mocha": "10.0.10",
     "@types/sinon": "17.0.4",
     "chai": "6.2.0",
+    "eslint": "9.37.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-unused-imports": "^4.2.0",
     "mocha": "11.7.4",
+    "prettier": "3.4.2",
     "release-it": "19.0.5",
     "sinon": "21.0.0",
     "ts-node": "10.9.2",
     "type-fest": "5.0.1",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.46.0"
   },
   "dependencies": {
     "reflect-metadata": "0.2.2"
