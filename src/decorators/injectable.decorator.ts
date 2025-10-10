@@ -1,4 +1,4 @@
-export const InjectableMetadataKey = "injectable";
+export const InjectableMetadataKey = "self:injectable";
 
 export const Injectable = (): ClassDecorator => {
   return (target) =>

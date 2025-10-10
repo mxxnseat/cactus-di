@@ -1,4 +1,4 @@
-export const InjectMetadataKey = "inject";
+export const InjectMetadataKey = "self:inject";
 
 export const Inject = (resolver?: { forwardRef: any }): ParameterDecorator => {
   return (

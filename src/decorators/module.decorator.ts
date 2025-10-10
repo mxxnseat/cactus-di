@@ -1,6 +1,6 @@
 import { Constructor } from "type-fest";
 
-export const ModuleMetadataKey = "module";
+export const ModuleMetadataKey = "self:module";
 
 export interface ModuleOptions {
   providers?: any[];
