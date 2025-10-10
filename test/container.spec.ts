@@ -1,7 +1,7 @@
 import { describe, it } from "mocha";
 import sinon from "sinon";
 import { Container } from "../src/container";
-import { forwardRef, Injectable, LazyInject, Module } from "../src/decorators";
+import { Inject, Injectable, Module } from "../src/decorators";
 import { expect } from "chai";
 import {
   TestSuccessProvider,
@@ -160,7 +160,8 @@ describe("Container", () => {
 
     @Injectable()
     class TestProvider {
-      @LazyInject(TestDependency)
+      // @ts-ignore
+      @Inject(TestDependency)
       testDependency!: TestDependency;
 
       public resolve() {
@@ -179,5 +180,101 @@ describe("Container", () => {
     provider.resolve();
 
     expect(provider.testDependency).to.be.instanceOf(TestDependency);
+  });
+
+  it("should resolve providers by interface", () => {
+    @Injectable()
+    class TestDependency implements ITestDependency {
+      constructor() {}
+
+      public test() {}
+    }
+
+    interface ITestDependency {
+      test(): void;
+    }
+    @Injectable()
+    class TestProvider {
+      constructor(
+        @Inject(TestDependency) public readonly testDependency: ITestDependency
+      ) {}
+    }
+
+    @Module({ providers: [TestProvider, TestDependency] })
+    class TestModule {}
+
+    const container = new Container();
+    container.create(TestModule);
+
+    expect(container.get<any>(TestProvider).testDependency).to.be.instanceOf(
+      TestDependency
+    );
+  });
+
+  it("should inject two providers", () => {
+    @Injectable()
+    class TestDependency {
+      constructor() {}
+    }
+
+    @Injectable()
+    class TestDependency2 {
+      constructor() {}
+    }
+
+    @Injectable()
+    class TestProvider {
+      constructor(
+        public readonly testDependency: TestDependency,
+        public readonly testDependency2: TestDependency2
+      ) {}
+    }
+
+    @Module({ providers: [TestProvider, TestDependency, TestDependency2] })
+    class TestModule {}
+
+    const container = new Container();
+    container.create(TestModule);
+
+    expect(container.get<any>(TestProvider).testDependency).to.be.instanceOf(
+      TestDependency
+    );
+    expect(container.get<any>(TestProvider).testDependency2).to.be.instanceOf(
+      TestDependency2
+    );
+  });
+
+  it("should inject two providers using explicit inject", () => {
+    @Injectable()
+    class TestDependency {
+      constructor() {}
+    }
+
+    @Injectable()
+    class TestDependency2 {
+      constructor() {}
+    }
+
+    @Injectable()
+    class TestProvider {
+      constructor(
+        @Inject(TestDependency) public readonly testDependency: TestDependency,
+        @Inject(TestDependency2)
+        public readonly testDependency2: TestDependency2
+      ) {}
+    }
+
+    @Module({ providers: [TestProvider, TestDependency, TestDependency2] })
+    class TestModule {}
+
+    const container = new Container();
+    container.create(TestModule);
+
+    expect(container.get<any>(TestProvider).testDependency).to.be.instanceOf(
+      TestDependency
+    );
+    expect(container.get<any>(TestProvider).testDependency2).to.be.instanceOf(
+      TestDependency2
+    );
   });
 });

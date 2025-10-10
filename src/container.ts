@@ -13,10 +13,7 @@ import {
   selfTypeMetadataKey,
   singletonMetadataKey,
 } from "./constants";
-import {
-  LazyInjectMetadataKey,
-  LazyInjectTokenMetadataKey,
-} from "./decorators";
+import { LazyInjectTokenMetadataKey } from "./decorators";
 
 export class Container {
   private readonly container = new Map<Provider, unknown>();
@@ -45,10 +42,7 @@ export class Container {
     return this.exportProviders(moduleOptions);
   }
 
-  private buildDependencyGraph({
-    providers = [],
-    imports = [],
-  }: ModuleOptions) {
+  private buildDependencyGraph({ providers = [] }: ModuleOptions) {
     const indegree = new Map<Provider, number>();
     const graph = new Map<Provider, Provider[]>();
 
@@ -66,7 +60,7 @@ export class Container {
           ...(graph.get(parameter as any) ?? ([] as any)),
           provider,
         ]);
-        indegree.set(provider, (indegree.get(provider as any) ?? 0) + 1);
+        indegree.set(provider, (indegree.get(provider) ?? 0) + 1);
       });
     }
     const queue: Provider[] = providersCopy.filter(
@@ -75,7 +69,7 @@ export class Container {
     const sorted: Provider[] = [];
 
     while (queue.length !== 0) {
-      let current = queue.shift()!;
+      const current = queue.shift()!;
       if (!("forwardRef" in current)) {
         sorted.push(current);
       }
@@ -128,8 +122,9 @@ export class Container {
 
   private buildDependency(provider: Provider) {
     const parameters =
-      Reflect.getMetadata(designParamtypesMetadataKey, provider) ?? [];
-    const dependencies = parameters.map((param: Provider) =>
+      (Reflect.getMetadata(designParamtypesMetadataKey, provider) as any[]) ??
+      [];
+    const dependencies = parameters.map<unknown>((param: Provider) =>
       this.container.get(param)
     );
     if (Reflect.hasOwnMetadata(singletonMetadataKey, provider)) {
@@ -150,6 +145,8 @@ export class Container {
   private getModuleOptions(
     module: new (...args: any[]) => unknown
   ): ModuleOptions | null {
-    return Reflect.getMetadata(ModuleMetadataKey, module) ?? null;
+    return (
+      (Reflect.getMetadata(ModuleMetadataKey, module) as ModuleOptions) ?? null
+    );
   }
 }
