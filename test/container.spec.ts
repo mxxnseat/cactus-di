@@ -1,7 +1,7 @@
 import { describe, it } from "mocha";
 import sinon from "sinon";
 import { Container } from "../src/container";
-import { forwardRef, Injectable, Module } from "../src/decorators";
+import { forwardRef, Injectable, LazyInject, Module } from "../src/decorators";
 import { expect } from "chai";
 import {
   TestSuccessProvider,
@@ -150,5 +150,34 @@ describe("Container", () => {
     container.create(TestModule);
 
     expect(spy.calledOnce).to.be.true;
+  });
+
+  it("should resolve provider only when it's actually used", () => {
+    @Injectable()
+    class TestDependency {
+      constructor() {}
+    }
+
+    @Injectable()
+    class TestProvider {
+      @LazyInject(TestDependency)
+      testDependency!: TestDependency;
+
+      public resolve() {
+        this.testDependency;
+      }
+    }
+
+    @Module({ providers: [TestProvider, TestDependency] })
+    class TestModule {}
+
+    const container = new Container();
+    container.create(TestModule);
+    expect(container.get(TestDependency)).to.be.null;
+
+    const provider = container.get<any>(TestProvider);
+    provider.resolve();
+
+    expect(provider.testDependency).to.be.instanceOf(TestDependency);
   });
 });

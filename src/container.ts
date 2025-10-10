@@ -7,7 +7,16 @@ import {
 import { Provider } from "./interfaces";
 import { CircularDependencyError } from "./errors";
 import { Constructor } from "type-fest";
-import { designParamtypesMetadataKey, singletonMetadataKey } from "./constants";
+import {
+  designParamtypesMetadataKey,
+  designTypeMetadataKey,
+  selfTypeMetadataKey,
+  singletonMetadataKey,
+} from "./constants";
+import {
+  LazyInjectMetadataKey,
+  LazyInjectTokenMetadataKey,
+} from "./decorators";
 
 export class Container {
   private readonly container = new Map<Provider, unknown>();
@@ -86,19 +95,50 @@ export class Container {
   }
 
   private initializeDependencies(sortedGraph: Provider[]) {
-    sortedGraph.map((provider) => {
-      const parameters =
-        Reflect.getMetadata(designParamtypesMetadataKey, provider) ?? [];
-      const dependencies = parameters.map((param: Provider) =>
-        this.container.get(param)
+    sortedGraph.forEach((provider) => {
+      const lazyInject = Reflect.getMetadata(
+        LazyInjectTokenMetadataKey,
+        provider
       );
-      if (Reflect.hasOwnMetadata(singletonMetadataKey, provider)) {
+      const params =
+        Reflect.getMetadata(selfTypeMetadataKey, provider.prototype) ?? [];
+      params.forEach((param: any) => {
+        const dependency = Reflect.getMetadata(
+          designTypeMetadataKey,
+          provider.prototype,
+          param
+        );
+
+        Object.defineProperty(provider.prototype, param, {
+          get: () => {
+            const instance = this.container.get(dependency);
+            if (!instance) {
+              return this.buildDependency(dependency);
+            }
+            return instance;
+          },
+        });
+      });
+      if (lazyInject) {
         return;
       }
-      const providerInstance = new provider(...dependencies);
-      Reflect.defineMetadata(singletonMetadataKey, true, provider);
-      this.container.set(provider, providerInstance);
+      this.buildDependency(provider);
     });
+  }
+
+  private buildDependency(provider: Provider) {
+    const parameters =
+      Reflect.getMetadata(designParamtypesMetadataKey, provider) ?? [];
+    const dependencies = parameters.map((param: Provider) =>
+      this.container.get(param)
+    );
+    if (Reflect.hasOwnMetadata(singletonMetadataKey, provider)) {
+      return;
+    }
+    const providerInstance = new provider(...dependencies);
+    Reflect.defineMetadata(singletonMetadataKey, true, provider);
+    this.container.set(provider, providerInstance);
+    return providerInstance;
   }
 
   private exportProviders({ exports = [] }: ModuleOptions) {
