@@ -1,15 +1,13 @@
+import "reflect-metadata";
+
 import { describe, it } from "mocha";
 import sinon from "sinon";
 import { Container } from "../src/container";
-import { Inject, Injectable, Module } from "../src/decorators";
+import { forwardRef, Inject, Injectable, Module } from "../src/decorators";
 import { expect } from "chai";
-import {
-  TestSuccessProvider,
-  TestSuccessRootCircularDependency,
-  TestFailProvider,
-  TestFailRootCircularDependency,
-} from "./classes/circular-dependency";
 import { CircularDependencyError } from "../src/errors";
+import { TestFailProvider } from "./classes/circular-dependency/fail";
+import { TestFailRootCircularDependency } from "./classes/circular-dependency/fail";
 
 describe("Container", () => {
   it("should build module with no dependencies", () => {
@@ -51,8 +49,19 @@ describe("Container", () => {
   });
 
   it("should build module with circular dependencies if the dependencies are injected with forwardRef", () => {
+    class TestSuccessProvider {
+      constructor(
+        @Inject(forwardRef(() => TestSuccessRootCircularDependency))
+        public readonly testRootCircularDependency: any
+      ) {}
+    }
+    @Injectable()
+    class TestSuccessRootCircularDependency {
+      constructor(public readonly testSuccessProvider: TestSuccessProvider) {}
+    }
+
     @Module({
-      providers: [TestSuccessProvider, TestSuccessRootCircularDependency],
+      providers: [TestSuccessRootCircularDependency, TestSuccessProvider],
     })
     class TestModule {}
 
@@ -160,7 +169,6 @@ describe("Container", () => {
 
     @Injectable()
     class TestProvider {
-      // @ts-ignore
       @Inject(TestDependency)
       testDependency!: TestDependency;
 
@@ -175,11 +183,70 @@ describe("Container", () => {
     const container = new Container();
     container.create(TestModule);
     expect(container.get(TestDependency)).to.be.null;
-
     const provider = container.get<any>(TestProvider);
     provider.resolve();
 
     expect(provider.testDependency).to.be.instanceOf(TestDependency);
+  });
+
+  it("should resolve provider from nested module only when it's actually used", () => {
+    @Injectable()
+    class TestDependency {
+      constructor() {}
+    }
+
+    @Module({ providers: [TestDependency], exports: [TestDependency] })
+    class TestNestedModule {}
+
+    @Injectable()
+    class TestProvider {
+      @Inject(TestDependency)
+      testDependency!: TestDependency;
+
+      public resolve() {
+        this.testDependency;
+      }
+    }
+
+    @Module({ imports: [TestNestedModule], providers: [TestProvider] })
+    class TestModule {}
+
+    const container = new Container();
+    container.create(TestModule);
+    expect(container.get(TestDependency)).to.be.null;
+    const provider = container.get<any>(TestProvider);
+    provider.resolve();
+
+    // @ts-ignore
+    container.moduleRefs.forEach(
+      (container) => expect(container.get(TestDependency)).to.not.be.null
+    );
+
+    expect(provider.testDependency).to.be.instanceOf(TestDependency);
+  });
+
+  it("should thrown an error if postponed provider is not accessable from the module", () => {
+    @Injectable()
+    class TestDependency {
+      constructor() {}
+    }
+
+    @Injectable()
+    class TestProvider {
+      @Inject(TestDependency)
+      testDependency!: TestDependency;
+
+      public resolve() {
+        this.testDependency;
+      }
+    }
+
+    @Module({ providers: [TestProvider] })
+    class TestModule {}
+
+    const container = new Container();
+    container.create(TestModule);
+    expect(() => container.get<any>(TestProvider).testDependency).throws(Error);
   });
 
   it("should resolve providers by interface", () => {
@@ -205,6 +272,68 @@ describe("Container", () => {
 
     const container = new Container();
     container.create(TestModule);
+
+    expect(container.get<any>(TestProvider).testDependency).to.be.instanceOf(
+      TestDependency
+    );
+  });
+
+  it("should resolve providers by interface with forwardRef", () => {
+    @Injectable()
+    class TestDependency implements ITestDependency {
+      constructor() {}
+
+      public test() {}
+    }
+
+    interface ITestDependency {
+      test(): void;
+    }
+    @Injectable()
+    class TestProvider {
+      constructor(
+        @Inject(forwardRef(() => TestDependency))
+        public readonly testDependency: ITestDependency
+      ) {}
+    }
+
+    @Module({ providers: [TestProvider, TestDependency] })
+    class TestModule {}
+
+    const container = new Container();
+    container.create(TestModule);
+
+    expect(container.get<any>(TestProvider).testDependency).to.be.instanceOf(
+      TestDependency
+    );
+  });
+
+  it("should resolve lazy loading providers by interface with forwardRef", () => {
+    interface ITestDependency {}
+
+    @Injectable()
+    class TestDependency implements ITestDependency {
+      constructor() {}
+    }
+
+    @Injectable()
+    class TestProvider {
+      @Inject(forwardRef(() => TestDependency))
+      public readonly testDependency: ITestDependency;
+
+      public resolve() {
+        this.testDependency;
+      }
+    }
+
+    @Module({ providers: [TestProvider, TestDependency] })
+    class TestModule {}
+
+    const container = new Container();
+    container.create(TestModule);
+
+    const provider = container.get<any>(TestProvider);
+    provider.resolve();
 
     expect(container.get<any>(TestProvider).testDependency).to.be.instanceOf(
       TestDependency

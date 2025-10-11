@@ -7,13 +7,13 @@ import { Provider } from "../interfaces";
 
 export const LazyInjectTokenMetadataKey = "self:lazyInjectToken";
 
-export function Inject(
-  dependency?: { forwardRef: any } | Provider
-): ParameterDecorator;
-export function Inject(dependency?: Provider): PropertyDecorator;
-export function Inject(
-  dependency?: { forwardRef: any } | Provider
-): ParameterDecorator & PropertyDecorator;
+function resolveDependency(dependency?: { forwardRef: any } | Provider): any {
+  return dependency
+    ? "forwardRef" in dependency
+      ? dependency.forwardRef()
+      : dependency
+    : undefined;
+}
 
 export function Inject(
   dependency?: { forwardRef: any } | Provider
@@ -39,7 +39,15 @@ export function Inject(
         target,
         propertyKey as string
       );
-      const resolvedDependency = dependency ?? metadataDependency;
+      const resolvedDependency =
+        resolveDependency(dependency) ?? metadataDependency;
+
+      Reflect.defineMetadata(
+        designTypeMetadataKey,
+        resolvedDependency,
+        target,
+        propertyKey as string
+      );
       Reflect.defineMetadata(
         LazyInjectTokenMetadataKey,
         true,

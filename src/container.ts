@@ -10,6 +10,7 @@ import { Constructor } from "type-fest";
 import {
   designParamtypesMetadataKey,
   designTypeMetadataKey,
+  selfContainerRelationMetadataKey,
   selfTypeMetadataKey,
   singletonMetadataKey,
 } from "./constants";
@@ -28,13 +29,15 @@ export class Container {
     if (!moduleOptions) {
       throw new Error(`Module ${module.name} is not a module`);
     }
+    moduleOptions.providers?.forEach((provider) => {
+      Reflect.defineMetadata(selfContainerRelationMetadataKey, this, provider);
+    });
     (moduleOptions.imports ?? []).forEach((importModule) => {
       const moduleContainer = new Container();
       const exportedProviders = moduleContainer.create(importModule);
-      exportedProviders.forEach((provider: any) => {
-        this.container.set(provider.constructor, provider);
+      exportedProviders.forEach((value, provider: Provider) => {
+        this.container.set(provider, value);
       });
-
       this.moduleRefs.set(importModule, moduleContainer);
     });
     const sortedGraph = this.buildDependencyGraph(moduleOptions);
@@ -49,6 +52,7 @@ export class Container {
     const providersCopy = [...providers];
 
     for (const provider of providersCopy) {
+      this.container.set(provider, null);
       const parameters =
         Reflect.getMetadata(designParamtypesMetadataKey, provider) ?? [];
       indegree.set(provider, indegree.get(provider) ?? 0);
@@ -102,12 +106,22 @@ export class Container {
           provider.prototype,
           param
         );
-
         Object.defineProperty(provider.prototype, param, {
           get: () => {
             const instance = this.container.get(dependency);
+            const instanceContainer = Reflect.getMetadata(
+              selfContainerRelationMetadataKey,
+              dependency
+            );
+            if (!instanceContainer) {
+              throw new Error("Unknown provider");
+            }
+
             if (!instance) {
-              return this.buildDependency(dependency);
+              this.container.set(
+                dependency,
+                instanceContainer?.buildDependency(dependency)
+              );
             }
             return instance;
           },
@@ -121,12 +135,20 @@ export class Container {
   }
 
   private buildDependency(provider: Provider) {
+    if (!this.container.has(provider)) {
+      throw new Error(`Dependency ${provider.name} is not available`);
+    }
+    const existedProvider = this.container.get(provider);
+    if (existedProvider) {
+      return existedProvider;
+    }
     const parameters =
       (Reflect.getMetadata(designParamtypesMetadataKey, provider) as any[]) ??
       [];
-    const dependencies = parameters.map<unknown>((param: Provider) =>
-      this.container.get(param)
-    );
+    const dependencies = parameters.map<unknown>((param: any) => {
+      const resolvedParam = "forwardRef" in param ? param.forwardRef() : param;
+      return this.container.get(resolvedParam);
+    });
     if (Reflect.hasOwnMetadata(singletonMetadataKey, provider)) {
       return;
     }
@@ -137,9 +159,13 @@ export class Container {
   }
 
   private exportProviders({ exports = [] }: ModuleOptions) {
-    return Array.from(this.container.values()).filter((provider: any) =>
-      exports.includes(provider.constructor)
-    );
+    const exportedProviders = new Map<Provider, unknown>();
+    exports.forEach((exported) => {
+      if (this.container.has(exported)) {
+        exportedProviders.set(exported, this.container.get(exported));
+      }
+    });
+    return exportedProviders;
   }
 
   private getModuleOptions(
