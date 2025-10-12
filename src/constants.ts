@@ -1,6 +1,10 @@
 export const designParamtypesMetadataKey = "design:paramtypes";
 export const designTypeMetadataKey = "design:type";
-export const selfContainerRelationMetadataKey = "self:containerRelation";
 export const selfExportMetadataKey = "self:export";
 export const selfTypeMetadataKey = "self:type";
-export const singletonMetadataKey = "singleton";
+export const selfDependenciesMetadataKey = "self:dependencies";
+export const selfPropertiesMetadataKey = "self:properties";
+export const selfLazyMetadataKey = "self:lazy";
+export const selfGlobalMetadataKey = "self:global";
+export const moduleMetadataKey = "self:module";
+export const injectableMetadataKey = "self:injectable";
