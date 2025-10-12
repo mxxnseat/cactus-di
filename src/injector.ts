@@ -36,21 +36,30 @@ export class Injector {
     instanceWrapper: InstanceWrapper,
     module: Module
   ): unknown[] {
-    const selfDefinedDependencies = Reflect.getMetadata(
-      selfDependenciesMetadataKey,
-      instanceWrapper.token
-    ) as SelfDefinedDependency[];
-    const contructorParams = Reflect.getMetadata(
-      designParamtypesMetadataKey,
-      instanceWrapper.token
-    ) as Provider[];
+    const selfDefinedDependencies =
+      (Reflect.getMetadata(
+        selfDependenciesMetadataKey,
+        instanceWrapper.token
+      ) as SelfDefinedDependency[]) ?? [];
+    const contructorParams =
+      (Reflect.getMetadata(
+        designParamtypesMetadataKey,
+        instanceWrapper.token
+      ) as Provider[]) ?? [];
+    const combinedParams: SelfDefinedDependency[] = contructorParams.map(
+      (param, index) => ({
+        param,
+        index,
+      })
+    );
+
+    selfDefinedDependencies.forEach((dep) => {
+      combinedParams[dep.index] = { param: dep.param, index: dep.index };
+    });
 
     this.applyPropertyInjections(instanceWrapper, module);
 
-    const params =
-      this.resolveSelfDefinedDependency(selfDefinedDependencies) ??
-      contructorParams ??
-      [];
+    const params = this.resolveSelfDefinedDependency(combinedParams) ?? [];
 
     return params.map((dep) => this.resolveDependency(dep, module));
   }
