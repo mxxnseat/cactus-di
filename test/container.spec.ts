@@ -90,6 +90,36 @@ describe("Container", () => {
         container.get<TestService>(TestService)?.testDependency
       ).to.be.instanceOf(TestDependency);
     });
+
+    it("should resolve all providers if @Inject and injection by type are used", () => {
+      @Injectable()
+      class TestDependency {}
+
+      @Injectable()
+      class TestDependency2 {}
+
+      @Injectable()
+      class TestService {
+        constructor(
+          @Inject(TestDependency) public readonly testDependency: any,
+          public readonly testDependency2: TestDependency2
+        ) {}
+      }
+
+      @Module({ providers: [TestService, TestDependency, TestDependency2] })
+      class RootModule {}
+
+      const container = new Container();
+      expect(() => container.create(RootModule)).to.not.throw();
+      expect(container.get(TestService)).to.be.instanceOf(TestService);
+      expect(container.get(TestDependency)).to.be.instanceOf(TestDependency);
+      expect(
+        container.get<TestService>(TestService)?.testDependency
+      ).to.be.instanceOf(TestDependency);
+      expect(
+        container.get<TestService>(TestService)?.testDependency2
+      ).to.be.instanceOf(TestDependency2);
+    });
   });
   describe("Forwards reference", () => {
     it("should resolve a forward reference", () => {
