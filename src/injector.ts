@@ -72,16 +72,25 @@ export class Injector {
       this.resolveSelfDefinedProperty(
         Reflect.getMetadata(selfPropertiesMetadataKey, instanceWrapper.token)
       ) ?? [];
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const savedThis = this;
     properties.forEach((property) => {
       Object.defineProperty(instanceWrapper.token.prototype, property.key, {
         configurable: true,
         enumerable: true,
-        get: () => {
-          const depInstance = this.resolveDependency(
+        get: function () {
+          const depInstance = savedThis.resolveDependency(
             property.type as Provider,
             module
           );
-          return depInstance;
+
+          Object.defineProperty(this, property.key, {
+            value: depInstance,
+            writable: false,
+            configurable: false,
+            enumerable: true,
+          });
+          return depInstance as Provider;
         },
       });
     });
